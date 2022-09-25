@@ -1,0 +1,4 @@
+github.com/BambooEngine/goibus v0.0.0-20200430030917-ea4df577c5d6 h1:duAh0Z56MHQpHoIZDQGGcYjLNFQljPLUlcy2pI2PWbg=
+github.com/BambooEngine/goibus v0.0.0-20200430030917-ea4df577c5d6/go.mod h1:k0Sa2NLxVGrxYttQnbmJN0YxKtpPr+0x1Aql5FlD6QU=
+github.com/godbus/dbus v4.1.0+incompatible h1:WqqLRTsQic3apZUK9qC5sGNfXthmPXzUZ7nQPrNITa4=
+github.com/godbus/dbus v4.1.0+incompatible/go.mod h1:/YcGZj5zSblfDWMMoOzV4fas9FZnQYTkDnsGvmh2Grw=
