@@ -10,9 +10,6 @@ import (
 	"github.com/godbus/dbus"
 )
 
-const engineBasePath = "/org/freedesktop/IBus/Engine/Shin"
-const busName = "org.freedesktop.IBus.Shin"
-
 type engine struct {
 	ibus.Engine
 }
