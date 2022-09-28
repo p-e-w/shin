@@ -5,6 +5,8 @@ package main
 
 import (
 	"fmt"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/BambooEngine/goibus/ibus"
 	"github.com/godbus/dbus"
@@ -12,12 +14,115 @@ import (
 
 type engine struct {
 	ibus.Engine
+	text      string
+	cursorPos uint32
+}
+
+func (e *engine) textLength() uint32 {
+	return uint32(utf8.RuneCountInString(e.text))
+}
+
+func (e *engine) updateText() {
+	fmt.Printf("Shin: updateText(text = '%v', cursorPos = %v)\n", e.text, e.cursorPos)
+
+	ibusText := ibus.NewText(e.text)
+	ibusText.AppendAttr(ibus.IBUS_ATTR_TYPE_UNDERLINE, ibus.IBUS_ATTR_UNDERLINE_SINGLE, 0, e.textLength())
+
+	e.UpdatePreeditText(ibusText, e.cursorPos, e.text != "")
+}
+
+func (e *engine) moveCursor(offset int32) {
+	newCursorPos := int32(e.cursorPos) + offset
+
+	textLength := e.textLength()
+
+	if newCursorPos < 0 {
+		e.cursorPos = 0
+	} else if newCursorPos > int32(textLength) {
+		e.cursorPos = textLength
+	} else {
+		e.cursorPos = uint32(newCursorPos)
+	}
 }
 
 func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (bool, *dbus.Error) {
 	fmt.Printf("Shin: ProcessKeyEvent(keyval = %v, keycode = %v, state = %v)\n", keyval, keycode, state)
 
+	if state&ReleaseMask != 0 {
+		// Key released.
+		return false, nil
+	}
+
+	switch keyval {
+	case KeyReturn, KeyKPEnter:
+		// TODO
+		return true, nil
+
+	case KeyEscape:
+		// TODO
+		return true, nil
+
+	case KeyBackSpace:
+		if e.cursorPos > 0 {
+			characters := []rune(e.text)
+			characters = append(characters[:e.cursorPos-1], characters[e.cursorPos:]...)
+			e.text = string(characters)
+
+			e.cursorPos--
+
+			e.updateText()
+		}
+		return true, nil
+
+	case KeyDelete, KeyKPDelete:
+		if e.cursorPos < e.textLength() {
+			characters := []rune(e.text)
+			characters = append(characters[:e.cursorPos], characters[e.cursorPos+1:]...)
+			e.text = string(characters)
+
+			e.updateText()
+		}
+		return true, nil
+
+	case KeyLeft, KeyKPLeft:
+		e.moveCursor(-1)
+		e.updateText()
+		return true, nil
+
+	case KeyRight, KeyKPRight:
+		e.moveCursor(1)
+		e.updateText()
+		return true, nil
+	}
+
+	character := rune(keyval)
+
+	if character <= unicode.MaxLatin1 && unicode.IsPrint(character) {
+		if e.cursorPos == e.textLength() {
+			e.text += string(character)
+		} else {
+			characters := []rune(e.text)
+			characters = append(characters[:e.cursorPos+1], characters[e.cursorPos:]...)
+			characters[e.cursorPos] = character
+			e.text = string(characters)
+		}
+
+		e.cursorPos++
+
+		e.updateText()
+
+		return true, nil
+	}
+
 	return false, nil
+}
+
+func (e *engine) FocusOut() *dbus.Error {
+	e.text = ""
+	e.cursorPos = 0
+	e.updateText()
+
+	return nil
 }
 
 func main() {
@@ -32,7 +137,7 @@ func main() {
 		engineId++
 
 		path := dbus.ObjectPath(fmt.Sprintf("%v/%v", engineBasePath, engineId))
-		engine := &engine{ibus.BaseEngine(connection, path)}
+		engine := &engine{ibus.BaseEngine(connection, path), "", 0}
 
 		ibus.PublishEngine(connection, path, engine)
 
