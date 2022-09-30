@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"os/exec"
 	"unicode"
 	"unicode/utf8"
 
@@ -31,6 +32,12 @@ func (e *engine) updateText() {
 	e.UpdatePreeditText(ibusText, e.cursorPos, e.text != "")
 }
 
+func (e *engine) clearText() {
+	e.text = ""
+	e.cursorPos = 0
+	e.updateText()
+}
+
 func (e *engine) moveCursor(offset int32) {
 	newCursorPos := int32(e.cursorPos) + offset
 
@@ -55,11 +62,23 @@ func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (b
 
 	switch keyval {
 	case KeyReturn, KeyKPEnter:
-		// TODO
+		command := exec.Command("bash", "-c", e.text)
+		output, err := command.CombinedOutput()
+
+		_, isExitError := err.(*exec.ExitError)
+
+		e.clearText()
+
+		if err == nil || isExitError {
+			e.CommitText(ibus.NewText(string(output)))
+		} else {
+			fmt.Printf("Shin: Error: %v\n", err)
+		}
+
 		return true, nil
 
 	case KeyEscape:
-		// TODO
+		e.clearText()
 		return true, nil
 
 	case KeyBackSpace:
@@ -118,10 +137,7 @@ func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (b
 }
 
 func (e *engine) FocusOut() *dbus.Error {
-	e.text = ""
-	e.cursorPos = 0
-	e.updateText()
-
+	e.clearText()
 	return nil
 }
 
