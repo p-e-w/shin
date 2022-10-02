@@ -71,7 +71,7 @@ func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (b
 
 	if state&ReleaseMask != 0 {
 		// Key released.
-		return false, nil
+		return true, nil
 	}
 
 	switch keyval {
@@ -129,6 +129,16 @@ func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (b
 		e.moveCursor(1)
 		e.updateText()
 		return true, nil
+
+	case KeyHome, KeyKPHome:
+		e.cursorPos = 0
+		e.updateText()
+		return true, nil
+
+	case KeyEnd, KeyKPEnd:
+		e.cursorPos = e.textLength()
+		e.updateText()
+		return true, nil
 	}
 
 	character := rune(keyval)
@@ -150,7 +160,7 @@ func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (b
 		return true, nil
 	}
 
-	return false, nil
+	return true, nil
 }
 
 func (e *engine) FocusOut() *dbus.Error {
