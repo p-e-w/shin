@@ -5,7 +5,9 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+	"time"
 	"unicode"
 	"unicode/utf8"
 
@@ -17,6 +19,18 @@ type engine struct {
 	ibus.Engine
 	text      string
 	cursorPos uint32
+}
+
+func (e *engine) exit() {
+	fmt.Println("Shin: Exiting")
+
+	go func() {
+		// Give the calling function time to return,
+		// so that pending IBus operations can finish.
+		time.Sleep(100 * time.Millisecond)
+
+		os.Exit(0)
+	}()
 }
 
 func (e *engine) textLength() uint32 {
@@ -75,10 +89,13 @@ func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (b
 			fmt.Printf("Shin: Error: %v\n", err)
 		}
 
+		e.exit()
+
 		return true, nil
 
 	case KeyEscape:
 		e.clearText()
+		e.exit()
 		return true, nil
 
 	case KeyBackSpace:
@@ -138,6 +155,8 @@ func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (b
 
 func (e *engine) FocusOut() *dbus.Error {
 	e.clearText()
+	e.exit()
+
 	return nil
 }
 
