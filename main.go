@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -14,6 +15,27 @@ import (
 	"github.com/BambooEngine/goibus/ibus"
 	"github.com/godbus/dbus"
 )
+
+// TODO: This only matches ASCII word boundaries!
+var wordBoundaryRegex = regexp.MustCompile(`\b`)
+
+func bytePosToCharacterPos(text string, bytePos int) int {
+	if bytePos == len(text) {
+		return utf8.RuneCountInString(text)
+	}
+
+	characterPos := 0
+
+	for i := range text {
+		if i == bytePos {
+			return characterPos
+		}
+
+		characterPos++
+	}
+
+	panic("byte position does not correspond to a character position")
+}
 
 type engine struct {
 	ibus.Engine
@@ -50,6 +72,50 @@ func (e *engine) clearText() {
 	e.text = ""
 	e.cursorPos = 0
 	e.updateText()
+}
+
+func (e *engine) previousWordBoundary() uint32 {
+	text := string([]rune(e.text)[:e.cursorPos])
+
+	locations := wordBoundaryRegex.FindAllStringIndex(text, -1)
+
+	if locations == nil {
+		return 0
+	}
+
+	boundary := locations[len(locations)-1][1]
+
+	if boundary == len(text) {
+		if len(locations) > 1 {
+			boundary = locations[len(locations)-2][1]
+		} else {
+			return 0
+		}
+	}
+
+	return uint32(bytePosToCharacterPos(text, boundary))
+}
+
+func (e *engine) nextWordBoundary() uint32 {
+	text := string([]rune(e.text)[e.cursorPos:])
+
+	locations := wordBoundaryRegex.FindAllStringIndex(text, 2)
+
+	if locations == nil {
+		return e.textLength()
+	}
+
+	boundary := locations[0][0]
+
+	if boundary == 0 {
+		if len(locations) > 1 {
+			boundary = locations[1][0]
+		} else {
+			return e.textLength()
+		}
+	}
+
+	return e.cursorPos + uint32(bytePosToCharacterPos(text, boundary))
 }
 
 func (e *engine) moveCursor(offset int32) {
@@ -121,12 +187,22 @@ func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (b
 		return true, nil
 
 	case KeyLeft, KeyKPLeft:
-		e.moveCursor(-1)
+		if state&ControlMask != 0 {
+			// Ctrl+Left.
+			e.cursorPos = e.previousWordBoundary()
+		} else {
+			e.moveCursor(-1)
+		}
 		e.updateText()
 		return true, nil
 
 	case KeyRight, KeyKPRight:
-		e.moveCursor(1)
+		if state&ControlMask != 0 {
+			// Ctrl+Right.
+			e.cursorPos = e.nextWordBoundary()
+		} else {
+			e.moveCursor(1)
+		}
 		e.updateText()
 		return true, nil
 
