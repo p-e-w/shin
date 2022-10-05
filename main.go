@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strings"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -150,7 +151,20 @@ func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (b
 		e.clearText()
 
 		if err == nil || isExitError {
-			e.CommitText(ibus.NewText(string(output)))
+			// Remove leading and trailing newlines from output
+			// to allow single-line output to flow into the
+			// surrounding text ...
+			outputText := strings.Trim(string(output), "\n")
+
+			// ... but place multi-line output in a separate
+			// block surrounded by newlines, so that tabular
+			// alignment is preserved regardless of where
+			// the output is inserted.
+			if strings.Contains(outputText, "\n") {
+				outputText = "\n" + outputText + "\n"
+			}
+
+			e.CommitText(ibus.NewText(outputText))
 		} else {
 			fmt.Printf("Shin: Error: %v\n", err)
 		}
