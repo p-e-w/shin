@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"regexp"
@@ -45,7 +46,7 @@ type engine struct {
 }
 
 func (e *engine) exit() {
-	fmt.Println("Shin: Exiting")
+	log.Printf("Exiting")
 
 	go func() {
 		// Give the calling function time to return,
@@ -61,7 +62,7 @@ func (e *engine) textLength() uint32 {
 }
 
 func (e *engine) updateText() {
-	fmt.Printf("Shin: updateText(text = '%v', cursorPos = %v)\n", e.text, e.cursorPos)
+	log.Printf("updateText(text = '%v', cursorPos = %v)", e.text, e.cursorPos)
 
 	ibusText := ibus.NewText(e.text)
 	ibusText.AppendAttr(ibus.IBUS_ATTR_TYPE_UNDERLINE, ibus.IBUS_ATTR_UNDERLINE_SINGLE, 0, e.textLength())
@@ -134,7 +135,7 @@ func (e *engine) moveCursor(offset int32) {
 }
 
 func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (bool, *dbus.Error) {
-	fmt.Printf("Shin: ProcessKeyEvent(keyval = %v, keycode = %v, state = %v)\n", keyval, keycode, state)
+	log.Printf("ProcessKeyEvent(keyval = %v, keycode = %v, state = %v)", keyval, keycode, state)
 
 	if state&ReleaseMask != 0 {
 		// Key released.
@@ -166,7 +167,7 @@ func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (b
 
 			e.CommitText(ibus.NewText(outputText))
 		} else {
-			fmt.Printf("Shin: Error: %v\n", err)
+			log.Printf("Error from CombinedOutput: %v", err)
 		}
 
 		e.exit()
@@ -261,7 +262,9 @@ func (e *engine) FocusOut() *dbus.Error {
 }
 
 func main() {
-	fmt.Println("Shin: Starting")
+	log.SetPrefix("[Shin] ")
+
+	log.Printf("Starting")
 
 	bus := ibus.NewBus()
 	connection := bus.GetDbusConn()
@@ -279,9 +282,13 @@ func main() {
 		return path
 	})
 
-	bus.RequestName(busName, 0)
+	_, err := bus.RequestName(busName, 0)
 
-	fmt.Println("Shin: Started")
+	if err != nil {
+		log.Fatalf("Error from RequestName: %v", err)
+	}
+
+	log.Printf("Started")
 
 	select {}
 }
