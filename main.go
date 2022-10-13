@@ -4,6 +4,8 @@
 package main
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -41,8 +43,13 @@ func bytePosToCharacterPos(text string, bytePos int) int {
 
 type engine struct {
 	ibus.Engine
+
 	text      string
 	cursorPos uint32
+
+	history       *history
+	historyPrefix string
+	historyIndex  uint32
 }
 
 func (e *engine) exit() {
@@ -74,6 +81,7 @@ func (e *engine) clearText() {
 	e.text = ""
 	e.cursorPos = 0
 	e.updateText()
+	e.historyIndex = 0
 }
 
 func (e *engine) previousWordBoundary() uint32 {
@@ -144,6 +152,17 @@ func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (b
 
 	switch keyval {
 	case KeyReturn, KeyKPEnter:
+		if e.text == "" {
+			e.exit()
+			return true, nil
+		}
+
+		err := e.history.addCommand(e.text)
+
+		if err != nil {
+			log.Printf("Error from addCommand: %v", err)
+		}
+
 		command := exec.Command("bash", "-c", e.text)
 		output, err := command.CombinedOutput()
 
@@ -175,8 +194,17 @@ func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (b
 		return true, nil
 
 	case KeyEscape:
-		e.clearText()
-		e.exit()
+		if e.historyIndex == 0 || e.historyPrefix == "" {
+			// Exit input engine.
+			e.clearText()
+			e.exit()
+		} else {
+			// Exit history mode.
+			e.text = e.historyPrefix
+			e.cursorPos = e.textLength()
+			e.updateText()
+			e.historyIndex = 0
+		}
 		return true, nil
 
 	case KeyBackSpace:
@@ -189,6 +217,7 @@ func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (b
 
 			e.updateText()
 		}
+		e.historyIndex = 0
 		return true, nil
 
 	case KeyDelete, KeyKPDelete:
@@ -199,6 +228,51 @@ func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (b
 
 			e.updateText()
 		}
+		e.historyIndex = 0
+		return true, nil
+
+	case KeyUp, KeyKPUp:
+		if e.historyIndex == 0 {
+			e.historyPrefix = e.text
+		}
+
+		command, err := e.history.getRecentCommand(e.historyPrefix, e.historyIndex)
+
+		if err == nil {
+			e.text = command
+			e.cursorPos = e.textLength()
+			e.updateText()
+			e.historyIndex++
+		} else if !errors.Is(err, sql.ErrNoRows) {
+			log.Printf("Error from getRecentCommand: %v", err)
+		}
+
+		return true, nil
+
+	case KeyDown, KeyKPDown:
+		if e.historyIndex == 0 {
+			return true, nil
+		}
+
+		e.historyIndex--
+
+		command := e.historyPrefix
+
+		if e.historyIndex > 0 {
+			var err error
+			command, err = e.history.getRecentCommand(e.historyPrefix, e.historyIndex-1)
+
+			if err != nil {
+				log.Printf("Error from getRecentCommand: %v", err)
+				e.historyIndex++
+				return true, nil
+			}
+		}
+
+		e.text = command
+		e.cursorPos = e.textLength()
+		e.updateText()
+
 		return true, nil
 
 	case KeyLeft, KeyKPLeft:
@@ -209,6 +283,7 @@ func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (b
 			e.moveCursor(-1)
 		}
 		e.updateText()
+		e.historyIndex = 0
 		return true, nil
 
 	case KeyRight, KeyKPRight:
@@ -219,16 +294,19 @@ func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (b
 			e.moveCursor(1)
 		}
 		e.updateText()
+		e.historyIndex = 0
 		return true, nil
 
 	case KeyHome, KeyKPHome:
 		e.cursorPos = 0
 		e.updateText()
+		e.historyIndex = 0
 		return true, nil
 
 	case KeyEnd, KeyKPEnd:
 		e.cursorPos = e.textLength()
 		e.updateText()
+		e.historyIndex = 0
 		return true, nil
 	}
 
@@ -245,8 +323,8 @@ func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (b
 		}
 
 		e.cursorPos++
-
 		e.updateText()
+		e.historyIndex = 0
 
 		return true, nil
 	}
@@ -266,6 +344,12 @@ func main() {
 
 	log.Printf("Starting")
 
+	history, err := openHistory()
+
+	if err != nil {
+		log.Fatalf("Error from openHistory: %v", err)
+	}
+
 	bus := ibus.NewBus()
 	connection := bus.GetDbusConn()
 
@@ -275,14 +359,18 @@ func main() {
 		engineId++
 
 		path := dbus.ObjectPath(fmt.Sprintf("%v/%v", engineBasePath, engineId))
-		engine := &engine{ibus.BaseEngine(connection, path), "", 0}
+
+		engine := &engine{
+			Engine:  ibus.BaseEngine(connection, path),
+			history: history,
+		}
 
 		ibus.PublishEngine(connection, path, engine)
 
 		return path
 	})
 
-	_, err := bus.RequestName(busName, 0)
+	_, err = bus.RequestName(busName, 0)
 
 	if err != nil {
 		log.Fatalf("Error from RequestName: %v", err)
