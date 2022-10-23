@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/BambooEngine/goibus/ibus"
+	"github.com/adrg/xdg"
 	"github.com/godbus/dbus"
 )
 
@@ -163,7 +165,10 @@ func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (b
 			log.Printf("Error from addCommand: %v", err)
 		}
 
-		command := exec.Command("bash", "-c", e.text)
+		binDirectory := filepath.Join(xdg.ConfigHome, "shin", "bin")
+		commandText := fmt.Sprintf(`PATH="%v:$PATH" && %v`, binDirectory, e.text)
+
+		command := exec.Command("bash", "-c", commandText)
 		output, err := command.CombinedOutput()
 
 		_, isExitError := err.(*exec.ExitError)

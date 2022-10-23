@@ -85,6 +85,26 @@ documentation.
 That's it! Shin is now just a keypress away whenever you need it.
 
 
+## The `shin/bin` directory
+
+If you use Shin frequently, it's quite natural to want to define custom commands
+for inserting commonly needed text. For example, you might like to have a
+`sig` command that inserts a signature with your name and address for use in
+emails and online discussions.
+
+Of course, you could just create a shell script which prints that text, and place
+it in any of the directories in the shell's search path. But then `sig` would
+also be available in regular interactive shells, and you probably don't want to
+pollute your global command namespace with Shin-specific commands. You may also
+wish to override some of the standard commands in Shin, *but only* in Shin.
+
+To solve these problems, Shin prepends the directory `$XDG_CONFIG_HOME/shin/bin`
+(which usually expands to `~/.config/shin/bin`) to the shell's search path when
+running commands. To define Shin-specific commands, simply create that directory,
+and drop executable scripts with the desired names there. They will be available
+in Shin, without affecting the behavior of the shell anywhere else.
+
+
 ## Security considerations
 
 By design, Shin turns every text input on your system into a basic terminal
