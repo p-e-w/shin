@@ -83,13 +83,13 @@ func (h *history) addCommand(command string) error {
 func (h *history) getRecentCommand(prefix string, index uint32) (string, error) {
 	var command string
 
-	// Searching for commands matching the prefix using BETWEEN
+	// Searching for commands matching the prefix using comparisons
 	// is much better than using LIKE because it is case sensitive,
 	// doesn't require escaping, and makes use of the index.
 	err := h.QueryRow(`
 
 	SELECT command FROM history
-	WHERE command BETWEEN ? AND ?
+	WHERE command > ? AND command <= ?
 	ORDER BY time DESC, rowid
 	LIMIT 1 OFFSET ?;
 
