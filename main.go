@@ -25,6 +25,8 @@ import (
 // TODO: This only matches ASCII word boundaries!
 var wordBoundaryRegex = regexp.MustCompile(`\b`)
 
+var sgrEscapeSequenceRegex = regexp.MustCompile(`\x1B\[[0-9;:]*m`)
+
 func bytePosToCharacterPos(text string, bytePos int) int {
 	if bytePos == len(text) {
 		return utf8.RuneCountInString(text)
@@ -176,10 +178,15 @@ func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (b
 		e.clearText()
 
 		if err == nil || isExitError {
+			// Remove SGR escape sequences (text attributes) from output.
+			// This is a workaround for programs that emit escape sequences
+			// regardless of whether they are writing to a TTY or not.
+			outputText := sgrEscapeSequenceRegex.ReplaceAllString(string(output), "")
+
 			// Remove leading and trailing newlines from output
 			// to allow single-line output to flow into the
 			// surrounding text ...
-			outputText := strings.Trim(string(output), "\n")
+			outputText = strings.Trim(outputText, "\n")
 
 			// ... but place multi-line output in a separate
 			// block surrounded by newlines, so that tabular
