@@ -344,11 +344,109 @@ func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (b
 	return true, nil
 }
 
+func (e *engine) SetCursorLocation(x int32, y int32, w int32, h int32) *dbus.Error {
+	log.Printf("SetCursorLocation(x = %v, y = %v, w = %v, h = %v)", x, y, w, h)
+
+	return nil
+}
+
+func (e *engine) SetSurroundingText(text dbus.Variant, cursor_index uint32, anchor_pos uint32) *dbus.Error {
+	log.Printf("SetSurroundingText(text = %v, cursor_index = %v, anchor_pos = %v)", text, cursor_index, anchor_pos)
+
+	return nil
+}
+
+func (e *engine) SetCapabilities(cap uint32) *dbus.Error {
+	log.Printf("SetCapabilities(cap = %v)", cap)
+
+	return nil
+}
+
+func (e *engine) FocusIn() *dbus.Error {
+	log.Printf("FocusIn()")
+
+	return nil
+}
+
 func (e *engine) FocusOut() *dbus.Error {
+	log.Printf("FocusOut()")
+
 	e.clearText()
 	e.exit()
 
 	return nil
+}
+
+func (e *engine) Reset() *dbus.Error {
+	log.Printf("Reset()")
+
+	return nil
+}
+
+func (e *engine) PageUp() *dbus.Error {
+	log.Printf("PageUp()")
+
+	return nil
+}
+
+func (e *engine) PageDown() *dbus.Error {
+	log.Printf("PageDown()")
+
+	return nil
+}
+
+func (e *engine) CursorUp() *dbus.Error {
+	log.Printf("CursorUp()")
+
+	return nil
+}
+
+func (e *engine) CursorDown() *dbus.Error {
+	log.Printf("CursorDown()")
+
+	return nil
+}
+
+func (e *engine) CandidateClicked(index uint32, button uint32, state uint32) *dbus.Error {
+	log.Printf("CandidateClicked(index = %v, button = %v, state = %v)", index, button, state)
+
+	return nil
+}
+
+func (e *engine) Enable() *dbus.Error {
+	log.Printf("Enable()")
+
+	return nil
+}
+
+func (e *engine) Disable() *dbus.Error {
+	log.Printf("Disable()")
+
+	return nil
+}
+
+func (e *engine) PropertyActivate(prop_name string, prop_state uint32) *dbus.Error {
+	log.Printf("PropertyActivate(prop_name = %v, prop_state = %v)", prop_name, prop_state)
+
+	return nil
+}
+
+func (e *engine) PropertyShow(prop_name string) *dbus.Error {
+	log.Printf("PropertyShow(prop_name = %v)", prop_name)
+
+	return nil
+}
+
+func (e *engine) PropertyHide(prop_name string) *dbus.Error {
+	log.Printf("PropertyHide(prop_name = %v)", prop_name)
+
+	return nil
+}
+
+func (e *engine) Destroy() *dbus.Error {
+	log.Printf("Destroy()")
+
+	return e.Engine.Destroy()
 }
 
 func main() {
@@ -369,6 +467,8 @@ func main() {
 
 	ibus.NewFactory(connection, func(connection *dbus.Conn, engineName string) dbus.ObjectPath {
 		engineId++
+
+		log.Printf("Creating engine %v", engineId)
 
 		path := dbus.ObjectPath(fmt.Sprintf("%v/%v", engineBasePath, engineId))
 
