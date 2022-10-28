@@ -380,6 +380,9 @@ func (e *engine) FocusOut() *dbus.Error {
 func (e *engine) Reset() *dbus.Error {
 	log.Printf("Reset()")
 
+	e.clearText()
+	e.exit()
+
 	return nil
 }
 
