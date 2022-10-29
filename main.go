@@ -454,6 +454,7 @@ func (e *engine) Destroy() *dbus.Error {
 
 func main() {
 	log.SetPrefix("[Shin] ")
+	log.SetFlags(log.Ltime | log.Lmicroseconds)
 
 	log.Printf("Starting")
 
