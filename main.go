@@ -373,7 +373,6 @@ func (e *engine) FocusIn() *dbus.Error {
 func (e *engine) FocusOut() *dbus.Error {
 	log.Printf("FocusOut()")
 
-	// TODO: The timeout or the whole functionality could be made configurable
 	if time.Since(e.startTime) < 250 * time.Millisecond {
 		log.Printf("FocusOut was quickly after starting. Skipping exit")
 	} else {
