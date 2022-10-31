@@ -373,7 +373,7 @@ func (e *engine) FocusIn() *dbus.Error {
 func (e *engine) FocusOut() *dbus.Error {
 	log.Printf("FocusOut()")
 
-	if time.Since(e.startTime) < 250 * time.Millisecond {
+	if time.Since(e.startTime) < 250*time.Millisecond {
 		log.Printf("FocusOut was quickly after starting. Skipping exit")
 	} else {
 		e.clearText()
