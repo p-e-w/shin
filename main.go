@@ -54,6 +54,8 @@ type engine struct {
 	history       *history
 	historyPrefix string
 	historyIndex  uint32
+
+	startTime time.Time
 }
 
 func (e *engine) exit() {
@@ -371,8 +373,12 @@ func (e *engine) FocusIn() *dbus.Error {
 func (e *engine) FocusOut() *dbus.Error {
 	log.Printf("FocusOut()")
 
-	e.clearText()
-	e.exit()
+	if time.Since(e.startTime) < 250*time.Millisecond {
+		log.Printf("FocusOut was quickly after starting. Skipping exit")
+	} else {
+		e.clearText()
+		e.exit()
+	}
 
 	return nil
 }
@@ -418,6 +424,8 @@ func (e *engine) CandidateClicked(index uint32, button uint32, state uint32) *db
 
 func (e *engine) Enable() *dbus.Error {
 	log.Printf("Enable()")
+
+	e.startTime = time.Now()
 
 	return nil
 }
