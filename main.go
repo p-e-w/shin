@@ -171,8 +171,8 @@ func (e *engine) ProcessKeyEvent(keyval uint32, keycode uint32, state uint32) (b
 
 		binDirectory := filepath.Join(xdg.ConfigHome, "shin", "bin")
 
-        // Optionally use a preconfigured command prefix
-        defaultCommand := os.Getenv("SHIN_DEFAULT_COMMAND")
+ 		// Optionally use a preconfigured command prefix
+ 		defaultCommand := os.Getenv("SHIN_DEFAULT_COMMAND")
  		commandText := fmt.Sprintf(`PATH="%v:$PATH" && %v %v`, binDirectory, defaultCommand, e.text)
 
 		command := exec.Command("bash", "-c", commandText)
