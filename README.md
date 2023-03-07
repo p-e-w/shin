@@ -84,6 +84,16 @@ documentation.
 
 That's it! Shin is now just a keypress away whenever you need it.
 
+### Step 4: Optionally configure a custom command
+
+If you are using shin to always run some specific command, you can edit the 
+`SHIN_DEFAULT_COMMAND`. It will append this to any bash shell you run. This environment
+variable can be set in your `~/.profile`, for example: 
+
+```bash
+export SHIN_DEFAULT_COMMAND="cowsay"
+```
+
 
 ## The `shin/bin` directory
 
